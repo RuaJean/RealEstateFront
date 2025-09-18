@@ -3,6 +3,7 @@ import type { Property } from "@/models/Property";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { listImagesByProperty } from "@/services/propertyImage.service";
+import Link from "next/link";
 
 export default function PropertyCard({ property }: { property: Property }) {
   const [thumb, setThumb] = useState<string | null>(null);
@@ -22,8 +23,8 @@ export default function PropertyCard({ property }: { property: Property }) {
     return () => { mounted = false; };
   }, [property.id]);
 
-  return (
-    <div className="border rounded overflow-hidden">
+  const content = (
+    <>
       <div className="relative w-full aspect-video bg-neutral-100">
         {thumb ? (
           <Image src={thumb} alt={property.name ?? "property"} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
@@ -36,7 +37,15 @@ export default function PropertyCard({ property }: { property: Property }) {
         <p className="text-sm text-neutral-700">{property.street}, {property.city}</p>
         <p className="text-sm">{property.price} {property.currency}</p>
       </div>
-    </div>
+    </>
+  );
+
+  return property.id ? (
+    <Link href={`/properties/${property.id}`} className="block border rounded overflow-hidden hover:shadow-sm transition-shadow">
+      {content}
+    </Link>
+  ) : (
+    <div className="border rounded overflow-hidden">{content}</div>
   );
 }
 
