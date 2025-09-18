@@ -67,4 +67,8 @@ export async function updatePropertyPrice(id: string, payload: PropertyPriceUpda
   await api.patch<void>(`/api/properties/${id}/price`, payload);
 }
 
+export async function deleteProperty(id: string): Promise<void> {
+  await api.delete<void>(`/api/properties/${id}`);
+}
+
 

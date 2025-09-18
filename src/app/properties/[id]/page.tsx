@@ -6,6 +6,7 @@ import PropertyImageGallery from "@/components/property/PropertyImageGallery";
 import PropertyTraceTable from "@/components/property/PropertyTraceTable";
 import OwnerCard from "@/components/owner/OwnerCard";
 import type { Property } from "@/models/Property";
+import PropertyTraceForm from "@/components/property/PropertyTraceForm";
 
 export default function Page() {
   const params = useParams<{ id: string }>();
@@ -45,6 +46,7 @@ export default function Page() {
 
       <section>
         <h2 className="text-xl font-semibold mb-2">Historial</h2>
+        <PropertyTraceForm propertyId={property.id!} />
         <PropertyTraceTable propertyId={property.id!} />
       </section>
     </main>

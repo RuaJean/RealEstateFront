@@ -1,19 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { listTracesByProperty } from "@/services/trace.service";
 import type { PropertyTrace } from "@/models/Property";
 
 export default function PropertyTraceTable({ propertyId }: { propertyId: string }) {
-  const [traces, setTraces] = useState<PropertyTrace[]>([]);
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const data = await listTracesByProperty(propertyId);
-      if (mounted) setTraces(data);
-    })();
-    return () => { mounted = false; };
-  }, [propertyId]);
-
+  const { data } = useQuery<PropertyTrace[]>({ queryKey: ["traces", propertyId], queryFn: () => listTracesByProperty(propertyId) });
+  const traces = data ?? [];
   if (!traces.length) return null;
 
   return (
