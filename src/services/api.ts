@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5106";
+export const API_BASE_URL = baseURL;
 
 export interface ApiError {
   status: number | null;
@@ -28,10 +29,10 @@ export const api = axios.create({ baseURL, withCredentials: true });
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken") || (document.cookie.split('; ').find((r) => r.startsWith('accessToken='))?.split('=')[1] ?? "");
     if (token) {
       config.headers = config.headers ?? {};
-      (config.headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+      (config.headers as Record<string, string>)["Authorization"] = `Bearer ${decodeURIComponent(token)}`;
     }
   }
   return config;

@@ -17,7 +17,10 @@ export function useAuth() {
     });
     if (typeof document !== "undefined" && res.accessToken) {
       const isSecure = location.protocol === "https:";
-      document.cookie = `accessToken=${res.accessToken}; Path=/; SameSite=Lax; ${isSecure ? "Secure;" : ""}`.trim();
+      const token = encodeURIComponent(res.accessToken);
+      const expires = res.expiresAtUtc ? `Expires=${new Date(res.expiresAtUtc).toUTCString()};` : "";
+      const maxAge = res.expiresAtUtc ? "" : "Max-Age=86400;"; // 1 día por defecto si no viene expiración
+      document.cookie = `accessToken=${token}; Path=/; ${expires} ${maxAge} SameSite=Lax; ${isSecure ? "Secure;" : ""}`.replace(/\s{2,}/g, " ").trim();
     }
     return res;
   }, [setSession]);
@@ -32,7 +35,10 @@ export function useAuth() {
     });
     if (typeof document !== "undefined" && res.accessToken) {
       const isSecure = location.protocol === "https:";
-      document.cookie = `accessToken=${res.accessToken}; Path=/; SameSite=Lax; ${isSecure ? "Secure;" : ""}`.trim();
+      const token = encodeURIComponent(res.accessToken);
+      const expires = res.expiresAtUtc ? `Expires=${new Date(res.expiresAtUtc).toUTCString()};` : "";
+      const maxAge = res.expiresAtUtc ? "" : "Max-Age=86400;";
+      document.cookie = `accessToken=${token}; Path=/; ${expires} ${maxAge} SameSite=Lax; ${isSecure ? "Secure;" : ""}`.replace(/\s{2,}/g, " ").trim();
     }
     return res;
   }, [setSession]);
