@@ -1,10 +1,12 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import PropertyFilter from "@/components/property/PropertyFilter";
 import PropertyCard from "@/components/property/PropertyCard";
 import { useProperties } from "@/hooks/useProperties";
+import { listProperties } from "@/services/property.service";
+import type { Property } from "@/models/Property";
 
 // Iconos SVG
 const BuildingIcon = () => (
@@ -44,6 +46,114 @@ export default function Page() {
 
   const { properties, isLoading, page, pageSize, hasNext, total } = useProperties(filters);
 
+  // Exportación
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportAnchorRef = useRef<HTMLButtonElement | null>(null);
+
+  const fetchAllProperties = async (flt: typeof filters): Promise<Property[]> => {
+    const size = 200;
+    let current = 1;
+    const all: Property[] = [];
+    while (true) {
+      const res = await listProperties({ ...flt, page: current, pageSize: size });
+      const items = (res?.items ?? []) as Property[];
+      all.push(...items);
+      const stopBySize = items.length < size;
+      const stopByTotal = res?.total ? all.length >= res.total : false;
+      if (stopBySize || stopByTotal) break;
+      current += 1;
+      await new Promise(r => setTimeout(r, 0));
+    }
+    return all;
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const onExport = async (format: "pdf" | "excel") => {
+    setExportOpen(false);
+    const date = new Date();
+    const yyyy = String(date.getFullYear());
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+
+    if (format === "pdf") {
+      const rows = await fetchAllProperties(filters);
+      const tableHtml = rows.map((p) => {
+        const name = (p.name ?? "").toString().replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        const address = [p.street, p.city].filter(Boolean).join(", ").toString().replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        const price = (p.price ?? "").toString();
+        const currency = (p.currency ?? "").toString();
+        const year = (p.year ?? "").toString();
+        const area = (p.area ?? "").toString();
+        return `<tr><td>${name}</td><td>${address}</td><td>${price}</td><td>${currency}</td><td>${year}</td><td>${area}</td></tr>`;
+      }).join("");
+      const printHtml = `<!doctype html><html><head><meta charset=\"utf-8\"/><title>Propiedades</title>
+        <style>body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+        h1{font-size:18px;margin:16px 0;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ddd;padding:8px;font-size:12px;} th{background:#f3f4f6;text-align:left;}
+        @media print { @page { size: A4; margin: 16mm; } }
+        </style></head><body>
+        <h1>Listado de Propiedades</h1>
+        <table><thead><tr><th>Nombre</th><th>Dirección</th><th>Precio</th><th>Moneda</th><th>Año</th><th>Área</th></tr></thead><tbody>
+        ${tableHtml}
+        </tbody></table>
+        <script>window.onload=()=>{window.focus(); window.print();};<\/script>
+        </body></html>`;
+      const htmlBlob = new Blob([printHtml], { type: "text/html" });
+      const blobUrl = URL.createObjectURL(htmlBlob);
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.src = blobUrl;
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } finally {
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+            iframe.remove();
+          }, 1000);
+        }
+      };
+      document.body.appendChild(iframe);
+      return;
+    }
+
+    // Excel (.xlsx)
+    const rows = await fetchAllProperties(filters);
+    const XLSX = await import("xlsx");
+    const header = ["Nombre", "Dirección", "Precio", "Moneda", "Año", "Área"];
+    const data = rows.map((p) => [
+      p.name ?? "",
+      [p.street, p.city].filter(Boolean).join(", "),
+      p.price ?? "",
+      p.currency ?? "",
+      p.year ?? "",
+      p.area ?? "",
+    ]);
+    const aoa = [header, ...data];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    (ws as any)["!cols"] = [{ wch: 30 }, { wch: 40 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 8 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Propiedades");
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    downloadBlob(blob, `properties_${yyyy}${mm}${dd}.xlsx`);
+  };
+
   const goToPage = (p: number) => {
     const next = new URLSearchParams(params.toString());
     next.set("page", String(Math.max(1, p)));
@@ -73,13 +183,43 @@ export default function Page() {
                 </p>
               </div>
             </div>
-            <Link 
-              href="/properties/new" 
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium px-4 py-2 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <PlusIcon />
-              Nueva Propiedad
-            </Link>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  ref={exportAnchorRef}
+                  onClick={() => setExportOpen((v) => !v)}
+                  className="inline-flex items-center gap-2 bg-white text-gray-700 hover:text-gray-900 hover:bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+                  </svg>
+                  Exportar
+                </button>
+                {exportOpen && (
+                  <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-10">
+                    <button
+                      onClick={() => onExport("excel")}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Excel (.xlsx)
+                    </button>
+                    <button
+                      onClick={() => onExport("pdf")}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+              <Link 
+                href="/properties/new" 
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium px-4 py-2 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <PlusIcon />
+                Nueva Propiedad
+              </Link>
+            </div>
           </div>
         </div>
 

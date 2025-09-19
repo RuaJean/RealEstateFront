@@ -4,8 +4,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Owner } from "@/models/Owner";
-import { listOwners } from "@/services/owner.service";
 import type { Property } from "@/models/Property";
+import { useOwners } from "@/hooks/useOwners";
 
 const createSchema = z.object({
   name: z.string().min(2),
@@ -44,13 +44,43 @@ export default function PropertyForm({
   onSubmit: (values: any) => void | Promise<void>;
   submitting?: boolean;
 }) {
-  const [owners, setOwners] = useState<Owner[]>([]);
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [page, setPage] = useState(1);
+  const [accOwners, setAccOwners] = useState<Owner[]>([]);
+  const [openDropdown, setOpenDropdown] = useState(false);
+
+  // debounce del término de búsqueda
   useEffect(() => {
-    (async () => setOwners(await listOwners()))();
-  }, []);
+    const id = setTimeout(() => setDebounced(search.trim()), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  // fetch owners con paginación
+  const { owners, hasNext, isLoading, isFetching } = useOwners({ name: debounced, page, pageSize: 10 });
+
+  // acumular resultados por página; resetear al cambiar búsqueda
+  useEffect(() => {
+    setPage(1);
+  }, [debounced]);
+
+  useEffect(() => {
+    if (page === 1) {
+      setAccOwners(owners ?? []);
+    } else {
+      setAccOwners(prev => {
+        const incoming = owners ?? [];
+        const merged = [...prev];
+        for (const o of incoming) {
+          if (!merged.some(m => m.id === o.id)) merged.push(o);
+        }
+        return merged;
+      });
+    }
+  }, [owners, page]);
 
   const isEdit = Boolean(defaultValues?.id);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<any>({
+  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<any>({
     resolver: zodResolver(isEdit ? updateSchema : createSchema),
     defaultValues: {
       name: defaultValues?.name ?? "",
@@ -67,6 +97,15 @@ export default function PropertyForm({
       active: defaultValues?.active ?? true,
     } as any,
   });
+
+  const selectedOwnerId: string = watch("ownerId");
+  useEffect(() => {
+    // cuando hay owner por defecto (ediciones futuras), sincronizar nombre en input
+    if (selectedOwnerId && accOwners.length > 0) {
+      const s = accOwners.find(o => o.id === selectedOwnerId);
+      if (s && search === "") setSearch(s?.name ?? "");
+    }
+  }, [selectedOwnerId, accOwners]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -222,17 +261,83 @@ export default function PropertyForm({
         </p>}
       </div>
       {!isEdit && (
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">Propietario</label>
-          <select 
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200" 
-            {...register("ownerId")}
-          > 
-            <option value="" className="text-gray-400">Seleccione un propietario...</option>
-            {owners.map((o) => (
-              <option key={o.id} value={o.id!} className="text-gray-900">{o.name}</option>
-            ))}
-          </select>
+          {/* input de búsqueda visual */}
+          <input
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            placeholder="Escribe para buscar propietario por nombre"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOpenDropdown(true);
+            }}
+            onFocus={() => setOpenDropdown(true)}
+            onBlur={(e) => {
+              // retraso pequeño para permitir click en opciones
+              setTimeout(() => setOpenDropdown(false), 150);
+            }}
+            aria-autocomplete="list"
+            aria-expanded={openDropdown}
+            autoComplete="off"
+          />
+          {/* input oculto ligado al formulario */}
+          <input type="hidden" {...register("ownerId")} />
+          {selectedOwnerId && (
+            <button
+              type="button"
+              className="absolute right-3 top-[42px] text-gray-500 hover:text-gray-700"
+              onClick={() => {
+                setValue("ownerId", "");
+                setSearch("");
+                setOpenDropdown(true);
+              }}
+              title="Limpiar selección"
+            >
+              ✕
+            </button>
+          )}
+          {openDropdown && (
+            <div className="absolute z-20 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-auto text-gray-900">
+              {isLoading && accOwners.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-700">Cargando...</div>
+              ) : accOwners.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-700">Sin resultados</div>
+              ) : (
+                <ul className="py-1 divide-y divide-gray-100">
+                  {accOwners.map((o) => (
+                    <li key={o.id}>
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setValue("ownerId", o.id!);
+                          setSearch(o.name ?? "");
+                          setOpenDropdown(false);
+                        }}
+                      >
+                        {o.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {hasNext && (
+                <div className="border-t border-gray-100">
+                  <button
+                    type="button"
+                    className="w-full px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                    disabled={isFetching}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    {isFetching ? "Cargando..." : "Cargar más"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {errors.ownerId && <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -244,12 +349,12 @@ export default function PropertyForm({
       {!isEdit && (
         <div className="md:col-span-2 flex items-center gap-3">
           <label className="inline-flex items-center gap-3 cursor-pointer">
-            <input 
+            {/* <input 
               type="checkbox" 
               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2" 
               {...register("active")} 
-            />
-            <span className="text-sm font-medium text-gray-700">Propiedad activa</span>
+            /> */}
+            {/* <span className="text-sm font-medium text-gray-700">Propiedad activa</span> */}
           </label>
         </div>
       )}

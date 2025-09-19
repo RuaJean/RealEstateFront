@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { formatCurrency } from "@/utils/helpers";
 
 // Iconos SVG
 const BuildingIcon = () => (
@@ -35,6 +37,7 @@ const ArrowTrendingUpIcon = () => (
 
 export default function Page() {
   const { accessToken } = useAuth();
+  const { stats, isLoading } = useDashboardStats();
   
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -58,10 +61,10 @@ export default function Page() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Propiedades</p>
-                <p className="text-2xl font-bold text-gray-900">156</p>
+                <p className="text-2xl font-bold text-gray-900">{isLoading ? "—" : (stats?.totalProperties ?? 0).toLocaleString("es")}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <ArrowTrendingUpIcon />
-                  <span className="text-sm text-green-600 font-medium">+12% este mes</span>
+                  <span className="text-sm text-green-600 font-medium">{stats?.lastUpdatedUtc ? new Date(stats.lastUpdatedUtc).toLocaleDateString("es") : ""}</span>
                 </div>
               </div>
               <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl text-white">
@@ -74,10 +77,10 @@ export default function Page() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Propietarios</p>
-                <p className="text-2xl font-bold text-gray-900">89</p>
+                <p className="text-2xl font-bold text-gray-900">{isLoading ? "—" : (stats?.totalOwners ?? 0).toLocaleString("es")}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <ArrowTrendingUpIcon />
-                  <span className="text-sm text-green-600 font-medium">+5% este mes</span>
+                  <span className="text-sm text-green-600 font-medium">{stats?.lastUpdatedUtc ? new Date(stats.lastUpdatedUtc).toLocaleDateString("es") : ""}</span>
                 </div>
               </div>
               <div className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl text-white">
@@ -90,10 +93,10 @@ export default function Page() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Valor Total</p>
-                <p className="text-2xl font-bold text-gray-900">$2.4M</p>
+                <p className="text-2xl font-bold text-gray-900">{isLoading ? "—" : formatCurrency(stats?.totalValue ?? 0, "USD", "es-CO")}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <ArrowTrendingUpIcon />
-                  <span className="text-sm text-green-600 font-medium">+8% este mes</span>
+                  <span className="text-sm text-green-600 font-medium">{stats?.lastUpdatedUtc ? new Date(stats.lastUpdatedUtc).toLocaleDateString("es") : ""}</span>
                 </div>
               </div>
               <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl text-white">
@@ -106,10 +109,10 @@ export default function Page() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Nuevas este mes</p>
-                <p className="text-2xl font-bold text-gray-900">23</p>
+                <p className="text-2xl font-bold text-gray-900">{isLoading ? "—" : (stats?.newThisMonth ?? 0).toLocaleString("es")}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <ArrowTrendingUpIcon />
-                  <span className="text-sm text-green-600 font-medium">+45% vs anterior</span>
+                  <span className="text-sm text-green-600 font-medium">{stats?.lastUpdatedUtc ? new Date(stats.lastUpdatedUtc).toLocaleDateString("es") : ""}</span>
                 </div>
               </div>
               <div className="p-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl text-white">
@@ -198,7 +201,7 @@ export default function Page() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        {/* <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Actividad Reciente</h2>
           <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
@@ -226,7 +229,7 @@ export default function Page() {
               <span className="text-sm text-gray-500">Hace 2 días</span>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </main>
   );
