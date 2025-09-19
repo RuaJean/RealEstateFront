@@ -1,67 +1,254 @@
 "use client";
-import { useEffect, useState } from "react";
-import { listOwners, deleteOwner } from "@/services/owner.service";
-import type { Owner } from "@/models/Owner";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useOwners } from "@/hooks/useOwners";
+import { deleteOwner } from "@/services/owner.service";
+
+// Iconos SVG
+const UsersIcon = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+
+const LocationIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const LoaderIcon = () => (
+  <svg className="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+);
 
 export default function Page() {
-  const [owners, setOwners] = useState<Owner[]>([]);
-  const [loading, setLoading] = useState(true);
+  const params = useSearchParams();
+  const router = useRouter();
+  const page = params.get("page") ? Number(params.get("page")) : 1;
+  const pageSize = params.get("pageSize") ? Number(params.get("pageSize")) : 10;
+  const name = params.get("name") ?? undefined;
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await listOwners();
-      setOwners(data);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
+  const { owners, isLoading, hasNext, refetch } = useOwners({ name, page, pageSize });
 
   const onDelete = async (id?: string) => {
     if (!id) return;
-    if (!confirm("¿Eliminar propietario?")) return;
-    await deleteOwner(id);
-    await load();
+    if (!confirm("¿Estás seguro de que quieres eliminar este propietario?")) return;
+    try { 
+      await deleteOwner(id); 
+    } catch (error) {
+      alert("Error al eliminar el propietario");
+    } finally { 
+      await refetch(); 
+    }
+  };
+
+  const goToPage = (p: number) => {
+    const next = new URLSearchParams(params.toString());
+    next.set("page", String(Math.max(1, p)));
+    next.set("pageSize", String(pageSize));
+    router.push(`/owners?${next.toString()}`);
   };
 
   return (
-    <main className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Propietarios</h1>
-        <Link href="/owners/new" className="bg-black text-white px-3 py-2 rounded">Nuevo</Link>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-600 rounded-xl text-white">
+                <UsersIcon />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Propietarios</h1>
+                <p className="text-gray-600">Gestiona todos los propietarios de tu sistema inmobiliario</p>
+              </div>
+            </div>
+            <Link 
+              href="/owners/new" 
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium px-4 py-2 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <PlusIcon />
+              Nuevo Propietario
+            </Link>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-12">
+              <div className="flex items-center gap-3 text-gray-600">
+                <LoaderIcon />
+                <span className="font-medium">Cargando propietarios...</span>
+              </div>
+            </div>
+          ) : owners.length === 0 ? (
+            <div className="text-center p-12">
+              <div className="p-4 bg-gray-100 rounded-2xl inline-block mb-4">
+                <UsersIcon />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay propietarios</h3>
+              <p className="text-gray-600 mb-4">Comienza agregando tu primer propietario al sistema</p>
+              <Link 
+                href="/owners/new"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium px-4 py-2 rounded-xl transition-all duration-200"
+              >
+                <PlusIcon />
+                Agregar Primer Propietario
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Propietario</th>
+                      <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Dirección</th>
+                      <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {owners.map((owner, index) => (
+                      <tr key={owner.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                              {owner.name?.charAt(0)?.toUpperCase() || "P"}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{owner.name}</p>
+                              <p className="text-sm text-gray-500">Propietario #{index + 1}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <LocationIcon />
+                            <span>{owner.address || "Sin dirección"}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center justify-center gap-2">
+                            <Link 
+                              href={`/owners/${owner.id}`}
+                              className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all duration-200"
+                            >
+                              <EditIcon />
+                              Editar
+                            </Link>
+                            <button 
+                              onClick={() => onDelete(owner.id)}
+                              className="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-all duration-200"
+                            >
+                              <TrashIcon />
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden p-4 space-y-4">
+                {owners.map((owner, index) => (
+                  <div key={owner.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        {owner.name?.charAt(0)?.toUpperCase() || "P"}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{owner.name}</h3>
+                        <p className="text-sm text-gray-500">Propietario #{index + 1}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-gray-600 mb-4">
+                      <LocationIcon />
+                      <span className="text-sm">{owner.address || "Sin dirección"}</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Link 
+                        href={`/owners/${owner.id}`}
+                        className="flex-1 inline-flex items-center justify-center gap-1 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg transition-all duration-200"
+                      >
+                        <EditIcon />
+                        Editar
+                      </Link>
+                      <button 
+                        onClick={() => onDelete(owner.id)}
+                        className="flex-1 inline-flex items-center justify-center gap-1 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-all duration-200"
+                      >
+                        <TrashIcon />
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {!isLoading && owners.length > 0 && (
+          <div className="flex items-center justify-between mt-6">
+            <button 
+              onClick={() => goToPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Anterior
+            </button>
+
+            <span className="text-sm text-gray-600 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+              Página {page}
+            </span>
+
+            <button 
+              onClick={() => goToPage(page + 1)} 
+              disabled={!hasNext}
+              className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed border border-gray-200 px-4 py-2 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+            >
+              Siguiente
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
-      {loading ? (
-        <p>Cargando...</p>
-      ) : (
-        <table className="min-w-full border">
-          <thead className="bg-neutral-100">
-            <tr>
-              <th className="text-left p-2 border">Nombre</th>
-              <th className="text-left p-2 border">Dirección</th>
-              <th className="text-left p-2 border">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {owners.map((o) => (
-              <tr key={o.id}>
-                <td className="p-2 border">{o.name}</td>
-                <td className="p-2 border">{o.address}</td>
-                <td className="p-2 border space-x-2">
-                  <>
-                    <Link className="underline" href={`/owners/${o.id}`}>Editar</Link>
-                    <button className="text-red-600" onClick={() => onDelete(o.id)}>Eliminar</button>
-                  </>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
     </main>
   );
 }

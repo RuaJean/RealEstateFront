@@ -7,7 +7,10 @@ export async function getOwnerById(id: string): Promise<Owner> {
 }
 
 export async function listOwners(params?: { name?: string; skip?: number; take?: number }): Promise<Owner[]> {
-  const { data } = await api.get<Owner[]>(`/api/Owner`, { params });
+  const { data } = await api.get<Owner[]>(`/api/Owner`, {
+    params: { ...(params ?? {}), ts: Date.now() },
+    headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+  } as any);
   return Array.isArray(data) ? data : [];
 }
 

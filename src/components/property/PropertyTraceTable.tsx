@@ -9,23 +9,27 @@ export default function PropertyTraceTable({ propertyId }: { propertyId: string 
   if (!traces.length) return null;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border">
-        <thead className="bg-neutral-100">
+    <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm">
+      <table className="min-w-full">
+        <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
           <tr>
-            <th className="text-left p-2 border">Fecha</th>
-            <th className="text-left p-2 border">Descripción</th>
-            <th className="text-left p-2 border">Valor</th>
-            <th className="text-left p-2 border">Moneda</th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Fecha</th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Descripción</th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Valor</th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Moneda</th>
           </tr>
         </thead>
-        <tbody>
-          {traces.map((t) => (
-            <tr key={t.id}>
-              <td className="p-2 border">{t.dateUtc ? new Date(t.dateUtc).toLocaleDateString() : ""}</td>
-              <td className="p-2 border">{t.description}</td>
-              <td className="p-2 border">{t.value}</td>
-              <td className="p-2 border">{t.currency}</td>
+        <tbody className="divide-y divide-gray-200">
+          {traces.map((t, index) => (
+            <tr key={t.id} className={`hover:bg-gray-50 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+              <td className="py-3 px-4 text-gray-900 text-sm font-medium">
+                {t.dateUtc ? new Date(t.dateUtc).toLocaleDateString('es-ES') : ""}
+              </td>
+              <td className="py-3 px-4 text-gray-700 text-sm">{t.description}</td>
+              <td className="py-3 px-4 text-gray-900 text-sm font-semibold">
+                {t.value?.toLocaleString()}
+              </td>
+              <td className="py-3 px-4 text-gray-600 text-sm uppercase font-medium">{t.currency}</td>
             </tr>
           ))}
         </tbody>
