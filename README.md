@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## RealEstateFront
 
-## Getting Started
+Aplicación Next.js para gestión de propiedades, propietarios e historial, integrada a una API externa.
 
-First, run the development server:
+### Requisitos
+- Node.js 18+ (recomendado 20+)
+- npm
 
+### Setup local
+1) Instalar dependencias:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2) Variables de entorno (`.env.local`):
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:5106
+```
+Apunta a tu API real (Es decir la parte backend de la prueba).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3) Ejecutar en desarrollo:
+```bash
+npm run dev
+```
+Abrir `http://localhost:3000`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Scripts
+- `npm run dev`: servidor de desarrollo
+- `npm run build`: build de producción
+- `npm run start`: iniciar build
+- `npm run test`: tests unitarios (Jest)
+- `npm run lint`: ESLint
 
-## Learn More
+### Contrato API
+- Archivo: `contracts/swagger.json`
+- Tipos generados: `src/models/api.ts` (via `openapi-typescript`)
 
-To learn more about Next.js, take a look at the following resources:
+### Arquitectura rápida
+- Cliente HTTP: `src/services/api.ts` (Axios + interceptores; agrega Authorization desde cookie/localStorage y maneja 401)
+- Tipos alias: `src/models/{Auth,Owner,Property}.ts`
+- Auth: `src/hooks/useAuth.ts`, `src/store/auth.store.ts`, `src/services/auth.service.ts`
+- Middleware: `src/middleware.ts` (protección de rutas y roles)
+- React Query: provider `src/components/common/QueryProvider.tsx`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Funcionalidades clave y rutas
+- Login/Register: `/login`, `/register`
+- Propiedades: listado `/properties`, detalle `/properties/[id]`, crear `/properties/new`, editar `/properties/[id]/edit`.
+- Propietarios: listado `/owners`, crear `/owners/new`, editar `/owners/[id]`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Componentes reutilizables
+- `PropertyCard`, `PropertyFilter`, `PropertyForm`, `PropertyImageGallery`, `ImageUploader`, `PropertyTraceTable`, `PropertyTraceForm`
+- `OwnerForm`, `OwnerCard`
 
-## Deploy on Vercel
+### Pattern de ramas (sugerido)
+- `main`: estable
+- `feat/<nombre>`: nuevas funcionalidades
+- `fix/<bug>`: correcciones
+- `chore/<tarea>`: tareas de soporte (deps, tooling)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Notas
+- Asegura `NEXT_PUBLIC_API_URL` apuntando al backend correcto.
+- Rutas protegidas requieren cookie `accessToken`; rutas admin requieren `role=admin`.

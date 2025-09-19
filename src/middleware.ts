@@ -7,7 +7,16 @@ export function middleware(request: NextRequest) {
   const publicPaths = ["/", "/login", "/register"];
   const isPublicPath = publicPaths.includes(pathname);
   const token = request.cookies.get("accessToken")?.value;
-  const role = request.cookies.get("role")?.value || "";
+
+  // Redirecciones específicas para la ruta raíz
+  if (pathname === "/") {
+    if (token) {
+      const url = new URL("/dashboard", request.url);
+      return NextResponse.redirect(url);
+    }
+    const url = new URL("/login", request.url);
+    return NextResponse.redirect(url);
+  }
 
   if (!isPublicPath && !token) {
     const url = new URL("/login", request.url);
@@ -15,19 +24,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Rutas admin
-  const adminOnly = [
-    "/dashboard",
-    "/owners",
-    "/owners/new",
-    "/properties/new",
-  ];
-  if (adminOnly.some((r) => pathname === r || pathname.startsWith(r + "/"))) {
-    if (role.toLowerCase() !== "admin") {
-      const url = new URL("/", request.url);
-      return NextResponse.redirect(url);
-    }
-  }
+  // Sin roles: cualquier usuario autenticado puede acceder a todo
 
   return NextResponse.next();
 }
