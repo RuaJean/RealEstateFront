@@ -51,12 +51,6 @@ Abrir `http://localhost:3000`.
 - `PropertyCard`, `PropertyFilter`, `PropertyForm`, `PropertyImageGallery`, `ImageUploader`, `PropertyTraceTable`, `PropertyTraceForm`
 - `OwnerForm`, `OwnerCard`
 
-### Pattern de ramas (sugerido)
-- `main`: estable
-- `feat/<nombre>`: nuevas funcionalidades
-- `fix/<bug>`: correcciones
-- `chore/<tarea>`: tareas de soporte (deps, tooling)
-
 ### Notas
 - Asegura `NEXT_PUBLIC_API_URL` apuntando al backend correcto.
 - Rutas protegidas requieren cookie `accessToken`;
