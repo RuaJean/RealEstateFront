@@ -59,4 +59,4 @@ Abrir `http://localhost:3000`.
 
 ### Notas
 - Asegura `NEXT_PUBLIC_API_URL` apuntando al backend correcto.
-- Rutas protegidas requieren cookie `accessToken`; rutas admin requieren `role=admin`.
+- Rutas protegidas requieren cookie `accessToken`;
