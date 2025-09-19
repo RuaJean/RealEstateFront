@@ -44,7 +44,7 @@ export default function Page() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © 2024 RealEstate. Todos los derechos reservados.
+            © 2025 RealEstate. Todos los derechos reservados.
           </p>
         </div>
       </div>
