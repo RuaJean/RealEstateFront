@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { listOwners, deleteOwner } from "@/services/owner.service";
 import type { Owner } from "@/models/Owner";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Page() {
+  const { role } = useAuth();
   const [owners, setOwners] = useState<Owner[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +35,9 @@ export default function Page() {
     <main className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Propietarios</h1>
-        <Link href="/owners/new" className="bg-black text-white px-3 py-2 rounded">Nuevo</Link>
+        {role?.toLowerCase() === "admin" && (
+          <Link href="/owners/new" className="bg-black text-white px-3 py-2 rounded">Nuevo</Link>
+        )}
       </div>
       {loading ? (
         <p>Cargando...</p>
@@ -52,8 +56,12 @@ export default function Page() {
                 <td className="p-2 border">{o.name}</td>
                 <td className="p-2 border">{o.address}</td>
                 <td className="p-2 border space-x-2">
-                  <Link className="underline" href={`/owners/${o.id}`}>Editar</Link>
-                  <button className="text-red-600" onClick={() => onDelete(o.id)}>Eliminar</button>
+                  {role?.toLowerCase() === "admin" && (
+                    <>
+                      <Link className="underline" href={`/owners/${o.id}`}>Editar</Link>
+                      <button className="text-red-600" onClick={() => onDelete(o.id)}>Eliminar</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

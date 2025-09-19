@@ -7,7 +7,7 @@ import type { Owner } from "@/models/Owner";
 import { listOwners } from "@/services/owner.service";
 import type { Property } from "@/models/Property";
 
-const schema = z.object({
+const createSchema = z.object({
   name: z.string().min(2),
   street: z.string().min(2),
   city: z.string().min(2),
@@ -22,6 +22,17 @@ const schema = z.object({
   active: z.boolean().default(true),
 });
 
+const updateSchema = z.object({
+  name: z.string().min(2),
+  street: z.string().min(2),
+  city: z.string().min(2),
+  state: z.string().min(2),
+  country: z.string().min(2),
+  zipCode: z.string().min(2),
+  year: z.coerce.number().int().min(1900),
+  area: z.coerce.number().positive(),
+});
+
 type FormValues = z.infer<typeof schema>;
 
 export default function PropertyForm({
@@ -30,7 +41,7 @@ export default function PropertyForm({
   submitting,
 }: {
   defaultValues?: Partial<Property>;
-  onSubmit: (values: FormValues) => void | Promise<void>;
+  onSubmit: (values: any) => void | Promise<void>;
   submitting?: boolean;
 }) {
   const [owners, setOwners] = useState<Owner[]>([]);
@@ -38,8 +49,9 @@ export default function PropertyForm({
     (async () => setOwners(await listOwners()))();
   }, []);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  const isEdit = Boolean(defaultValues?.id);
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<any>({
+    resolver: zodResolver(isEdit ? updateSchema : createSchema),
     defaultValues: {
       name: defaultValues?.name ?? "",
       street: defaultValues?.street ?? "",
@@ -88,16 +100,20 @@ export default function PropertyForm({
         <input className="border rounded p-2 w-full" {...register("zipCode")} />
         {errors.zipCode && <p className="text-red-600 text-sm">{errors.zipCode.message}</p>}
       </div>
-      <div>
-        <label className="block text-sm">Precio</label>
-        <input type="number" className="border rounded p-2 w-full" {...register("price", { valueAsNumber: true })} />
-        {errors.price && <p className="text-red-600 text-sm">{errors.price.message}</p>}
-      </div>
-      <div>
-        <label className="block text-sm">Moneda</label>
-        <input className="border rounded p-2 w-full" {...register("currency")} />
-        {errors.currency && <p className="text-red-600 text-sm">{errors.currency.message}</p>}
-      </div>
+      {!isEdit && (
+        <>
+          <div>
+            <label className="block text-sm">Precio</label>
+            <input type="number" className="border rounded p-2 w-full" {...register("price", { valueAsNumber: true })} />
+            {errors.price && <p className="text-red-600 text-sm">{errors.price.message}</p>}
+          </div>
+          <div>
+            <label className="block text-sm">Moneda</label>
+            <input className="border rounded p-2 w-full" {...register("currency")} />
+            {errors.currency && <p className="text-red-600 text-sm">{errors.currency.message}</p>}
+          </div>
+        </>
+      )}
       <div>
         <label className="block text-sm">Año</label>
         <input type="number" className="border rounded p-2 w-full" {...register("year", { valueAsNumber: true })} />
@@ -108,21 +124,25 @@ export default function PropertyForm({
         <input type="number" className="border rounded p-2 w-full" {...register("area", { valueAsNumber: true })} />
         {errors.area && <p className="text-red-600 text-sm">{errors.area.message}</p>}
       </div>
-      <div>
-        <label className="block text-sm">Propietario</label>
-        <select className="border rounded p-2 w-full" {...register("ownerId")}> 
-          <option value="">Seleccione...</option>
-          {owners.map((o) => (
-            <option key={o.id} value={o.id!}>{o.name}</option>
-          ))}
-        </select>
-        {errors.ownerId && <p className="text-red-600 text-sm">{errors.ownerId.message}</p>}
-      </div>
-      <div className="md:col-span-2 flex items-center gap-2">
-        <label className="inline-flex items-center gap-2">
-          <input type="checkbox" {...register("active")} /> Activa
-        </label>
-      </div>
+      {!isEdit && (
+        <div>
+          <label className="block text-sm">Propietario</label>
+          <select className="border rounded p-2 w-full" {...register("ownerId")}> 
+            <option value="">Seleccione...</option>
+            {owners.map((o) => (
+              <option key={o.id} value={o.id!}>{o.name}</option>
+            ))}
+          </select>
+          {errors.ownerId && <p className="text-red-600 text-sm">{errors.ownerId.message}</p>}
+        </div>
+      )}
+      {!isEdit && (
+        <div className="md:col-span-2 flex items-center gap-2">
+          <label className="inline-flex items-center gap-2">
+            <input type="checkbox" {...register("active")} /> Activa
+          </label>
+        </div>
+      )}
       <div className="md:col-span-2">
         <button type="submit" className="bg-black text-white px-4 py-2 rounded" disabled={submitting || isSubmitting}>
           {submitting || isSubmitting ? "Guardando..." : "Guardar"}

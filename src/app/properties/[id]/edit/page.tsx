@@ -35,7 +35,17 @@ export default function Page() {
     if (!property?.id) return;
     setSubmitting(true);
     try {
-      await updateProperty(property.id, values as PropertyUpdate);
+      const payload: PropertyUpdate = {
+        name: values.name,
+        street: values.street,
+        city: values.city,
+        state: values.state,
+        country: values.country,
+        zipCode: values.zipCode,
+        year: values.year,
+        area: values.area,
+      } as PropertyUpdate;
+      await updateProperty(property.id, payload);
       router.push(`/properties/${property.id}`);
     } finally {
       setSubmitting(false);
