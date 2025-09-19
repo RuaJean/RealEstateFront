@@ -3,7 +3,7 @@
 Aplicación Next.js para gestión de propiedades, propietarios e historial, integrada a una API externa.
 
 ### Requisitos
-- Node.js 18+ (recomendado 20+)
+- Node.js 18+ 
 - npm
 
 ### Setup local
